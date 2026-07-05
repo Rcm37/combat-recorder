@@ -14,7 +14,7 @@ Event.VarTransmit.Subscribe("myEvent", function(varTransmitEvent)
         updatedLog = true
     end
 
-    if RecordingActive and varName == "QUIVER_ACTIVE_AMMO" and newValue ~= nil and AmmoMap[newValue] then
+    if RecordingActive and varName == "QUIVER_ACTIVE_AMMO" and newValue ~= nil and oldValue ~= nil and newValue ~= oldValue and AmmoMap[newValue] then
         -- NOTE: only works with pernix and tirannwn quivers
         ProcessAmmo(newValue)
         updatedLog = true
