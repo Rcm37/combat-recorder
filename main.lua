@@ -21,12 +21,12 @@ Event.VarTransmit.Subscribe("myEvent", function(varTransmitEvent)
     end
 
     if updatedLog then
-       print(AbilityLog) 
+       print(CombatLog) 
     end
 end)
 
 RecordingActive = false
-AbilityLog = ""
+CombatLog = ""
 
 function StartRecording()
     print("Starting recording...")
@@ -42,23 +42,23 @@ function ExportRecording()
 end
 
 function ClearLog()
-    AbilityLog = ""
+    CombatLog = ""
 end
 
 function ProcessAbility(newValue)
-    if AbilityLog ~= "" then
+    if CombatLog ~= "" then
         -- TODO need to add logic to determine if an ability is used off-GCD to change the -> to a +
-        AbilityLog = AbilityLog .. " -> " .. AbilityMap[newValue]
+        CombatLog = CombatLog .. " -> " .. AbilityMap[newValue]
     else
-        AbilityLog = AbilityMap[newValue]
+        CombatLog = AbilityMap[newValue]
     end
 end
 
 function ProcessAmmo(newValue)
-    if AbilityLog ~= "" then
-        AbilityLog = AbilityLog .. " + " .. AmmoMap[newValue]
+    if CombatLog ~= "" then
+        CombatLog = CombatLog .. " + " .. AmmoMap[newValue]
     else
-        AbilityLog = AmmoMap[newValue]
+        CombatLog = AmmoMap[newValue]
     end
 end
 
