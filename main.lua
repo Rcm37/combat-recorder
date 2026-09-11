@@ -1,5 +1,59 @@
+local Settings = require("settings")
+
+local gallery = require("interface/gallery")
+
+local BUILD_EVENT = "combat_recorder_build"
+local ribbonButton = nil
+
+local function buildGallery()
+    return gallery.Build(function()
+        if ribbonButton then ribbonButton:SetActive(false) end
+    end)
+end
+ribbonButton = prettyui.RibbonBar.Register({
+    id = "TickMetronome",
+    icon = id.Sprite.CLAN_ICON_COMBAT_CROSSEDSWORDS,
+    tooltip = "Combat Recorder",
+    onClick = function(handle, active)
+        if active then
+            if buildGallery() then
+                gallery.Show()
+            else
+                handle:SetActive(false)
+            end
+        else
+            gallery.Close()
+        end
+    end,
+})
+-- The game area may not exist during the first plugin tick.
+if not buildGallery() then
+    Event.Logic.Subscribe(BUILD_EVENT, function()
+        if buildGallery() then
+            ribbonButton:SetActive(true)
+            Event.Logic.Unsubscribe(BUILD_EVENT)
+        end
+    end)
+else
+    ribbonButton:SetActive(true)
+end
+
+function PluginShutdown()
+    Event.Logic.Unsubscribe(BUILD_EVENT)
+    gallery.Destroy()
+
+    if ribbonButton then
+        ribbonButton:Destroy()
+        ribbonButton = nil
+    end
+end
+
+-- END UI STUFF
+
 local AbilityMap = require("abilitymap")
+local AbilityMapPvME = require("abilitymap_pvme")
 local AmmoMap = require("ammomap")
+local AmmoMapPvME = require("ammomap_pvme")
 
 Event.VarTransmit.Subscribe("myEvent", function(varTransmitEvent)
     local varName = varTransmitEvent.var.configName
@@ -9,85 +63,57 @@ Event.VarTransmit.Subscribe("myEvent", function(varTransmitEvent)
     local varChange = (oldValue or "nil") .. " -> " .. (newValue or "nil")
     local updatedLog = false
 
-    if RecordingActive and varName == "COMBATV2_JUST_USED_ABILITY" and newValue ~= nil and AbilityMap[newValue] ~= nil then
+    if Settings.get("recording_active") and varName == "COMBATV2_JUST_USED_ABILITY" and newValue ~= nil then
         ProcessAbility(newValue)
         updatedLog = true
     end
 
-    if RecordingActive and varName == "QUIVER_ACTIVE_AMMO" and newValue ~= nil and oldValue ~= nil and newValue ~= oldValue and AmmoMap[newValue] then
+    if Settings.get("recording_active") and varName == "QUIVER_ACTIVE_AMMO" and newValue ~= nil and oldValue ~= nil and newValue ~= oldValue then
         -- NOTE: only works with pernix and tirannwn quivers
         ProcessAmmo(newValue)
         updatedLog = true
     end
 
     if updatedLog then
-       print(CombatLog) 
+        gallery.updateCombatLog()
+        print(Settings.get("combat_log"))
     end
 end)
 
-RecordingActive = false
-CombatLog = ""
-
-function StartRecording()
-    print("Starting recording...")
-    RecordingActive = true
-end
-
-function StopRecording()
-    RecordingActive = false
-end
-
-function ExportRecording()
-    -- TODO
-end
-
-function ClearLog()
-    CombatLog = ""
-end
-
 function ProcessAbility(newValue)
-    if CombatLog ~= "" then
-        -- TODO need to add logic to determine if an ability is used off-GCD to change the -> to a +
-        CombatLog = CombatLog .. " -> " .. AbilityMap[newValue]
+    local abilityName = ""
+    if Settings.get("pvme_syntax") then
+        abilityName = AbilityMapPvME[newValue]
     else
-        CombatLog = AbilityMap[newValue]
+        abilityName = AbilityMap[newValue]
+    end
+    if abilityName ~= nil then
+        local combatLog = Settings.get("combat_log")
+        if combatLog ~= "" then
+            -- TODO need to add logic to determine if an ability is used off-GCD to change the -> to a +
+            combatLog = combatLog .. " -> " .. abilityName
+        else
+            combatLog = abilityName
+        end
+        Settings.update("combat_log", combatLog)
     end
 end
 
 function ProcessAmmo(newValue)
-    if CombatLog ~= "" then
-        CombatLog = CombatLog .. " + " .. AmmoMap[newValue]
+    local ammoName = ""
+    if Settings.get("pvme_syntax") then
+        ammoName = AmmoMapPvME[newValue]
     else
-        CombatLog = AmmoMap[newValue]
+        ammoName = AmmoMap[newValue]
+    end
+    if ammoName ~= nil then
+        local combatLog = Settings.get("combat_log")
+
+        if combatLog ~= "" then
+            combatLog = combatLog .. " + " .. ammoName
+        else
+            combatLog = ammoName
+        end
+        Settings.update("combat_log", combatLog)
     end
 end
-
-Root = ui.Interfaces:GetComponent(id.Component.TOPLEVEL_V2__GAME_AREA)
-
-popupButton = ui.Button.new(Root, 37, 2)
-popupButton:SetPos(1000, 300)
-popupButton:SetSize(200, 50)
-popupButton.stylesheetID = id.StyleSheet.BUTTON_ACTION_NEUTRAL_MOBILE
-popupButton.text.content = "Start Ability Recording"
-popupButton:Subscribe(ui.Hook.ONBUTTONPRESSED, function() StartRecording() end)
-
-popupButton = ui.Button.new(Root, 37, 3)
-popupButton:SetPos(1250, 300)
-popupButton:SetSize(200, 50)
-popupButton.stylesheetID = id.StyleSheet.BUTTON_ACTION_NEUTRAL_MOBILE
-popupButton.text.content = "End Ability Recording"
-popupButton:Subscribe(ui.Hook.ONBUTTONPRESSED, function() StopRecording() end)
-
-popupButton = ui.Button.new(Root, 37, 4)
-popupButton:SetPos(1000, 400)
-popupButton:SetSize(200, 50)
-popupButton.stylesheetID = id.StyleSheet.BUTTON_ACTION_NEUTRAL_MOBILE
-popupButton.text.content = "Export Ability Session"
-popupButton:Subscribe(ui.Hook.ONBUTTONPRESSED, function() ExportRecording() end)
-
-popupButton = ui.Button.new(Root, 37, 5)
-popupButton:SetPos(1250, 400)
-popupButton:SetSize(200, 50)
-popupButton.stylesheetID = id.StyleSheet.BUTTON_ACTION_NEUTRAL_MOBILE
-popupButton.text.content = "Clear Ability Log"
-popupButton:Subscribe(ui.Hook.ONBUTTONPRESSED, function() ClearLog() end)
