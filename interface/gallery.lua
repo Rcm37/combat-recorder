@@ -8,9 +8,6 @@ local GUI_HEIGHT = 260
 local toggleGUI = nil
 local onClose = nil
 
--- Component handles retained by the demo.
-local globalToggle = nil
-
 -- Build our primary window
 local function createDemoWindow(gameArea)
     return prettyui.Window.new(gameArea, {
@@ -29,16 +26,15 @@ local function createDemoWindow(gameArea)
     })
 end
 
--- Demo sections appear here in the same order as they appear in the UI.
 local function createWindow(window)
-    local globalToggle = window:AddCheckboxButton({
+    window:AddCheckboxButton({
         { text = "Enable Recording", value = "recording_active", selected = Settings.get("recording_active") },
     }, {
         onChange = function(_, _, changedValue, selected)
             updateSettings(changedValue, selected)
         end,
     })
-    local globalToggle = window:AddCheckboxButton({
+    window:AddCheckboxButton({
         { text = "Use PvME Rotation Builder Syntax", value = "pvme_syntax", selected = Settings.get("pvme_syntax") },
     }, {
         onChange = function(_, _, changedValue, selected)
@@ -54,10 +50,10 @@ local function createWindow(window)
     gallery.combat_log_text = ability_log_collapse:AddTextField({
         text = Settings.get("combat_log"),
     })
-    combat_log_instructions = ability_log_collapse:AddText({
+    ability_log_collapse:AddText({
         text = "Not intended for user input. CTRL+A CTRL+C to select all and copy"
     })
-    combat_log_clear = ability_log_collapse:AddSimpleButton("Clear Log", function()
+    ability_log_collapse:AddSimpleButton("Clear Log", function()
         gallery.clearLog()
     end)
 end
