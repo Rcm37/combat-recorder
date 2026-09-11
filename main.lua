@@ -11,7 +11,7 @@ local function buildGallery()
     end)
 end
 ribbonButton = prettyui.RibbonBar.Register({
-    id = "TickMetronome",
+    id = "CombatRecorder",
     icon = id.Sprite.CLAN_ICON_COMBAT_CROSSEDSWORDS,
     tooltip = "Combat Recorder",
     onClick = function(handle, active)
