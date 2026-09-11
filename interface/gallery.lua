@@ -32,7 +32,7 @@ end
 -- Demo sections appear here in the same order as they appear in the UI.
 local function createWindow(window)
     local globalToggle = window:AddCheckboxButton({
-        { text = "Enable Recording", value = "enabled", selected = Settings.get("recording_active") },
+        { text = "Enable Recording", value = "recording_active", selected = Settings.get("recording_active") },
     }, {
         onChange = function(_, _, changedValue, selected)
             updateSettings(changedValue, selected)
