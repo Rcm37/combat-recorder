@@ -1,50 +1,14 @@
 local Settings = require("settings")
-
-local gallery = require("interface/gallery")
-
-local BUILD_EVENT = "combat_recorder_build"
-local ribbonButton = nil
-
-local function buildGallery()
-    return gallery.Build(function()
-        if ribbonButton then ribbonButton:SetActive(false) end
-    end)
-end
-ribbonButton = prettyui.RibbonBar.Register({
-    id = "CombatRecorder",
-    icon = id.Sprite.CLAN_ICON_COMBAT_CROSSEDSWORDS,
-    tooltip = "Combat Recorder",
-    onClick = function(handle, active)
-        if active then
-            if buildGallery() then
-                gallery.Show()
-            else
-                handle:SetActive(false)
-            end
-        else
-            gallery.Close()
-        end
-    end,
-})
--- The game area may not exist during the first plugin tick.
-if not buildGallery() then
-    Event.Logic.Subscribe(BUILD_EVENT, function()
-        if buildGallery() then
-            ribbonButton:SetActive(true)
-            Event.Logic.Unsubscribe(BUILD_EVENT)
-        end
-    end)
-else
-    ribbonButton:SetActive(true)
-end
-
+local settingsUI = require("interface/settings")
+local contentUI = require("interface/content")
 function PluginShutdown()
-    Event.Logic.Unsubscribe(BUILD_EVENT)
-    gallery.Destroy()
-
-    if ribbonButton then
-        ribbonButton:Destroy()
-        ribbonButton = nil
+    Event.SettingsLayerReady.Unsubscribe("my-plugin-settings")
+    if settingsUI then
+        settingsUI = nil
+    end
+    Event.ContentLayerReady.Unsubscribe("my-plugin-content")
+    if contentUI then
+        contentUI = nil
     end
 end
 
@@ -75,8 +39,8 @@ Event.VarTransmit.Subscribe("myEvent", function(varTransmitEvent)
     end
 
     if updatedLog then
-        gallery.updateCombatLog()
-        print(Settings.get("combat_log"))
+        if settingsUI then settingsUI.updateCombatLog() end
+        if contentUI then contentUI.updateCombatLog() end
     end
 end)
 
