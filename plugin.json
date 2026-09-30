@@ -2,6 +2,8 @@
   "name": "CombatRecorder",
   "version": "0.1.0",
   "contactEmailAddress": "rcm37rs@gmail.com",
+  "hasRibbonIcon": true,
+  "hasSettingsIcon": true,
   "requiredDependencies": {
     "prettyui" : 6398181
   },
