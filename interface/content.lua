@@ -25,21 +25,10 @@ Event.ContentLayerReady.Subscribe("my-plugin-content", function(event)
             UIUtils.updateSettings(changedValue, selected)
         end,
     })
-    local ability_log_collapse = contentView:AddCollapseButton("Combat Log", {
-        expanded = Settings.get("expanded"),
-        onToggle = function(_, expanded)
-            UIUtils.updateSettings("expanded", expanded)
-        end,
-    })
-    contentView.combat_log_text = ability_log_collapse:AddTextField({
-        text = Settings.get("combat_log"),
-    })
-    ability_log_collapse:AddText({
-        text = "Not intended for user input. CTRL+A CTRL+C to select all and copy"
-    })
-    ability_log_collapse:AddSimpleButton("Clear Log", function()
-        contentUI.clearLog()
-    end)
+    contentView:AddText("Last action:")
+    contentView.last_action = contentView:AddText("Waiting...")
+    contentView:AddDivider()
+    contentView:AddText("Manage Combat Recorder settings via Plugin Hub to view full combat log!")
 end)
 
 function contentUI.clearLog()
@@ -47,10 +36,10 @@ function contentUI.clearLog()
     contentUI.updateCombatLog()
 end
 
-function contentUI.updateCombatLog()
-    if contentView == nil or contentView.combat_log_text == nil then
+function contentUI.updateLastAction(text)
+    if contentView == nil or contentView.last_action == nil then
         return
     end
-    contentView.combat_log_text:SetText(Settings.get("combat_log"))
+    contentView.last_action.content = text
 end
 return contentUI

@@ -27,20 +27,29 @@ Event.VarTransmit.Subscribe("myEvent", function(varTransmitEvent)
     local varChange = (oldValue or "nil") .. " -> " .. (newValue or "nil")
     local updatedLog = false
 
+    local abilityName = nil
+    local ammoName = nil
     if Settings.get("recording_active") and varName == "COMBATV2_JUST_USED_ABILITY" and newValue ~= nil then
-        ProcessAbility(newValue)
+        abilityName = ProcessAbility(newValue)
         updatedLog = true
     end
 
     if Settings.get("recording_active") and varName == "QUIVER_ACTIVE_AMMO" and newValue ~= nil and oldValue ~= nil and newValue ~= oldValue then
         -- NOTE: only works with pernix and tirannwn quivers
-        ProcessAmmo(newValue)
+        ammoName = ProcessAmmo(newValue)
         updatedLog = true
     end
 
     if updatedLog then
+        -- I know this logic for updating the last action is very brittle and will break as soon as a 3rd kind of thing is added
+        -- I will refactor it when I'm not on as tight of a timeline
+        if abilityName == nil then
+            if contentUI then contentUI.updateLastAction(ammoName) end
+        else
+            if contentUI then contentUI.updateLastAction(abilityName) end
+        end
         if settingsUI then settingsUI.updateCombatLog() end
-        if contentUI then contentUI.updateCombatLog() end
+        
     end
 end)
 
@@ -60,6 +69,7 @@ function ProcessAbility(newValue)
             combatLog = abilityName
         end
         Settings.update("combat_log", combatLog)
+        return abilityName
     end
 end
 
@@ -80,4 +90,5 @@ function ProcessAmmo(newValue)
         end
         Settings.update("combat_log", combatLog)
     end
+    return ammoName
 end

@@ -48,6 +48,7 @@ local function createWindow(window)
         end,
     })
     gallery.combat_log_text = ability_log_collapse:AddTextField({
+        maxLength = 9999,
         text = Settings.get("combat_log"),
     })
     ability_log_collapse:AddText({

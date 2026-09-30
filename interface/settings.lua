@@ -11,33 +11,14 @@ Event.SettingsLayerReady.Subscribe("my-plugin-settings", function(event)
         width = parent.width,
         height = parent.height,
     })
-    settingsView:AddCheckboxButton({
-        { text = "Enable Recording", value = "recording_active", selected = Settings.get("recording_active") },
-    }, {
-        onChange = function(_, _, changedValue, selected)
-            UIUtils.updateSettings(changedValue, selected)
-        end,
-    })
-    settingsView:AddCheckboxButton({
-        { text = "Use PvME Rotation Builder Syntax", value = "pvme_syntax", selected = Settings.get("pvme_syntax") },
-    }, {
-        onChange = function(_, _, changedValue, selected)
-            UIUtils.updateSettings(changedValue, selected)
-        end,
-    })
-    local ability_log_collapse = settingsView:AddCollapseButton("Combat Log", {
-        expanded = Settings.get("expanded"),
-        onToggle = function(_, expanded)
-            UIUtils.updateSettings("expanded", expanded)
-        end,
-    })
-    settingsView.combat_log_text = ability_log_collapse:AddTextField({
+    settingsView.combat_log_text = settingsView:AddTextField({
+        maxLength = 9999,
         text = Settings.get("combat_log"),
     })
-    ability_log_collapse:AddText({
+    settingsView:AddText({
         text = "Not intended for user input. CTRL+A CTRL+C to select all and copy"
     })
-    ability_log_collapse:AddSimpleButton("Clear Log", function()
+    settingsView:AddSimpleButton("Clear Log", function()
         settingsUI.clearLog()
     end)
 end)
