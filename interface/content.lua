@@ -4,7 +4,7 @@ local UIUtils = require("interface/ui_utils")
 
 local contentView = nil
 
-Event.ContentLayerReady.Subscribe("my-plugin-content", function(event)
+Event.ContentLayerReady.Subscribe("combat-recorder-content-pane", function(event)
 
     local parent = event.component
     contentView = prettyui.SimpleView.new(parent, {

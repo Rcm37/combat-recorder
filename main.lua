@@ -2,11 +2,11 @@ local Settings = require("settings")
 local settingsUI = require("interface/settings")
 local contentUI = require("interface/content")
 function PluginShutdown()
-    Event.SettingsLayerReady.Unsubscribe("my-plugin-settings")
+    Event.SettingsLayerReady.Unsubscribe("combat-recorder-settings-pane")
     if settingsUI then
         settingsUI = nil
     end
-    Event.ContentLayerReady.Unsubscribe("my-plugin-content")
+    Event.ContentLayerReady.Unsubscribe("combat-recorder-content-pane")
     if contentUI then
         contentUI = nil
     end
@@ -19,8 +19,13 @@ local AbilityMapPvME = require("abilitymap_pvme")
 local AmmoMap = require("ammomap")
 local AmmoMapPvME = require("ammomap_pvme")
 
-Event.VarTransmit.Subscribe("myEvent", function(varTransmitEvent)
+Event.VarTransmit.Subscribe("combat-recorder-var-transmit", function(varTransmitEvent)
+    
     local varName = varTransmitEvent.var.configName
+    -- If the var isn't one that the recorder cares about, short circuit and return
+    if not RelevantVarNames[varTransmitEvent.var.configName] then
+        return
+    end
     local oldValue = varTransmitEvent.oldValue
     local newValue = varTransmitEvent.newValue
 
@@ -34,6 +39,7 @@ Event.VarTransmit.Subscribe("myEvent", function(varTransmitEvent)
         updatedLog = true
     end
 
+    -- this is a terrible way to do this now that we can get worn equipment, rework it
     if Settings.get("recording_active") and varName == "QUIVER_ACTIVE_AMMO" and newValue ~= nil and oldValue ~= nil and newValue ~= oldValue then
         -- NOTE: only works with pernix and tirannwn quivers
         ammoName = ProcessAmmo(newValue)
@@ -92,3 +98,9 @@ function ProcessAmmo(newValue)
     end
     return ammoName
 end
+
+-- is it expected that this list will grow as functionality is added
+RelevantVarNames = {
+    ["COMBATV2_JUST_USED_ABILITY"] = true,
+    ["QUIVER_ACTIVE_AMMO"] = true
+}

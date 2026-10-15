@@ -4,7 +4,7 @@ local UIUtils = require("interface/ui_utils")
 
 local settingsView
 
-Event.SettingsLayerReady.Subscribe("my-plugin-settings", function(event)
+Event.SettingsLayerReady.Subscribe("combat-recorder-settings-pane", function(event)
 
     local parent = event.component
     settingsView = prettyui.SimpleView.new(parent, {
