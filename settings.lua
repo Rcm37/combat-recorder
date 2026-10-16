@@ -1,4 +1,13 @@
 local Settings = {}
+local listeners = {}
+
+function Settings.Subscribe(key, callback)
+    listeners[key] = callback
+end
+
+function Settings.Unsubscribe(key)
+    listeners[key] = nil
+end
 
 local PLUGIN_DB_PREFIX = "combat_recorder_"
 
@@ -24,6 +33,10 @@ local ValidSettings = {
     }
 }
 
+for _, variant in ipairs(require("eof_variants")) do
+    ValidSettings["eof_weapon_" .. variant.key] = { default = "", type = "string" }
+end
+
 local function assertValidSetting(settingName)
     if ValidSettings[settingName] == nil then
         error("Unknown setting: " .. tostring(settingName))
@@ -39,13 +52,18 @@ function Settings.update(settingName, value)
 
     local setting = ValidSettings[settingName]
 
-    CachedSettings[settingName] = value
+    if type(value) ~= setting.type then
+        error("Setting " .. settingName .. " expects " .. setting.type .. ", got " .. type(value))
+    end
 
     if setting.type == "boolean" then
         PersistentDB:SetBool(makeKey(settingName), value)
     elseif setting.type == "string" then
         PersistentDB:SetString(makeKey(settingName), value)
     end
+
+    CachedSettings[settingName] = value
+    for _, callback in pairs(listeners) do callback(settingName, value) end
 end
 
 function Settings.get(settingName)
@@ -64,13 +82,12 @@ function Settings.get(settingName)
     end
 
     if value == nil then
+        value = setting.default
         if setting.type == "boolean" then
-            PersistentDB:SetBool(makeKey(settingName), setting.default)
+            PersistentDB:SetBool(makeKey(settingName), value)
         elseif setting.type == "string" then
-            PersistentDB:SetString(makeKey(settingName), setting.default)
+            PersistentDB:SetString(makeKey(settingName), value)
         end
-
-        return setting.default
     end
     CachedSettings[settingName] = value
 
