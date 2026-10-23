@@ -1,45 +1,56 @@
-local contentUI = {}
 local Settings = require("settings")
-local UIUtils = require("interface/ui_utils")
+local Recorder = require("recorder")
+local ContentPane = {}
+local EVENT_ID = "combat-recorder-content-pane"
+local view, lastActionText
 
-local contentView = nil
+local function refreshLastAction()
+    if lastActionText then
+        lastActionText.content = Recorder.GetLastAction() or "Waiting..."
+    end
+end
 
-Event.ContentLayerReady.Subscribe("combat-recorder-content-pane", function(event)
+local function closeView()
+    Recorder.Unsubscribe("content-pane")
+    if view then view:Destroy() end
+    view, lastActionText = nil, nil
+end
 
+local function onLayerReady(event)
+    closeView()
     local parent = event.component
-    contentView = prettyui.SimpleView.new(parent, {
+    view = prettyui.SimpleView.new(parent, {
         width = parent.width,
         height = parent.height,
     })
-    contentView:AddCheckboxButton({
+    view:AddCheckboxButton({
         { text = "Enable Recording", value = "recording_active", selected = Settings.get("recording_active") },
     }, {
         onChange = function(_, _, changedValue, selected)
-            UIUtils.updateSettings(changedValue, selected)
+            Settings.update(changedValue, selected)
         end,
     })
-    contentView:AddCheckboxButton({
+    view:AddCheckboxButton({
         { text = "Use PvME Rotation Builder Syntax", value = "pvme_syntax", selected = Settings.get("pvme_syntax") },
     }, {
         onChange = function(_, _, changedValue, selected)
-            UIUtils.updateSettings(changedValue, selected)
+            Settings.update(changedValue, selected)
         end,
     })
-    contentView:AddText("Last action:")
-    contentView.last_action = contentView:AddText("Waiting...")
-    contentView:AddDivider()
-    contentView:AddText("Manage Combat Recorder settings via Plugin Hub to view full combat log!")
-end)
-
-function contentUI.clearLog()
-    Settings.update("combat_log", "")
-    contentUI.updateCombatLog()
+    view:AddText("Last action:")
+    lastActionText = view:AddText(Recorder.GetLastAction() or "Waiting...")
+    view:AddDivider()
+    view:AddText("Manage Combat Recorder settings via Plugin Hub to view full combat log!")
+    Recorder.Subscribe("content-pane", refreshLastAction)
 end
 
-function contentUI.updateLastAction(text)
-    if contentView == nil or contentView.last_action == nil then
-        return
-    end
-    contentView.last_action.content = text
+function ContentPane.Start()
+    Event.ContentLayerReady.Subscribe(EVENT_ID, onLayerReady)
 end
-return contentUI
+
+function ContentPane.Shutdown()
+    Event.ContentLayerReady.Unsubscribe(EVENT_ID)
+    closeView()
+end
+
+return ContentPane
