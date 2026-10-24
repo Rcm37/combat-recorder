@@ -20,13 +20,13 @@ Abilities are joined with ` -> `; equipment changes and ammunition switches use 
 
 ## Supported actions
 
-- Abilities present in the plugin's ability maps.
+- Abilities with a nonempty `COMBATV2_ABILITY_NAME` in their API struct. Normal output preserves the game's name and capitalization.
 - Equipment changes, including equipping and unequipping items. The gear already worn when recording starts establishes a baseline and is not added to the log.
 - Supported active-ammunition changes from Pernix and Tirannwn quivers.
 - Weapon special attacks annotated with the main-hand weapon equipped when used.
 - Essence of Finality special attacks annotated using your configured stored-weapon mapping.
 
-Ability and ammunition coverage depends on the bundled maps. PvME output uses known aliases where available; other equipment names become compact tokens that may not have corresponding PvME icons.
+Ability names come from `config.Struct.FromID(abilityID):GetParamValue(config.Param.COMBATV2_ABILITY_NAME)`. Missing, empty, or unreadable names are skipped. PvME output keeps the bundled ID-based translations (including special attacks) and falls back to a lowercase name with spaces and punctuation removed. These generated ability tokens and unmapped equipment tokens may not have corresponding PvME icons. Ammunition coverage depends on the bundled maps.
 
 ## Essence of Finality configuration
 

@@ -2,6 +2,7 @@ local Settings = require("settings")
 local Equipment = require("equipment")
 local EOF = require("eof")
 local ItemNames = require("item_names")
+local AbilityStruct = require("ability_struct")
 local Recorder = {}
 local EVENT_ID = "combat-recorder-var-transmit"
 local lastAction
@@ -11,7 +12,7 @@ local listeners = {}
 -- Add new action types here; logging and UI notifications are shared below.
 local ActionTypes = {
     COMBATV2_JUST_USED_ABILITY = {
-        map = require("abilitymap"),
+        getName = AbilityStruct.GetName,
         pvmeMap = require("abilitymap_pvme"),
         separator = " -> ",
     },
@@ -80,8 +81,17 @@ local function onVarTransmit(event)
     if not action or (action.accepts and not action.accepts(event)) then return end
 
     local pvme = Settings.get("pvme_syntax")
-    local map = pvme and action.pvmeMap or action.map
-    local name = map[event.newValue]
+    local name
+    if action.getName then
+        if pvme then name = action.pvmeMap[event.newValue] end
+        if name == nil then
+            name = action.getName(event.newValue)
+            if pvme and name then name = name:lower():gsub("[%s%p]", "") end
+        end
+    else
+        local map = pvme and action.pvmeMap or action.map
+        name = map[event.newValue]
+    end
     if name == nil then return end
 
     if event.var.configName == "COMBATV2_JUST_USED_ABILITY" then

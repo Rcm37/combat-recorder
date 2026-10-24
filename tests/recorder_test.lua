@@ -157,6 +157,34 @@ local function transmit(name, newValue, oldValue)
 end
 local function ability(id) transmit("COMBATV2_JUST_USED_ABILITY", id) end
 local function ammo(id, old) transmit("QUIVER_ACTIVE_AMMO", id, old) end
+local abilityNameParam = {}
+local abilityNames = {
+    [19255] = "balanced strike", [14682] = "backhand",
+    [28430] = "weapon special attack", [11748] = "essence of finality",
+    [999998] = "New Ability!", [999997] = "   ",
+}
+config = { Param = { COMBATV2_ABILITY_NAME = abilityNameParam }, Struct = {} }
+config.Struct.FromID = function(id)
+    if id == 999996 then error("unavailable struct") end
+    if abilityNames[id] == nil then return nil end
+    return { GetParamValue = function(_, param)
+        expect(param, abilityNameParam, "names use the documented ability name param")
+        return abilityNames[id]
+    end }
+end
+ability(999998)
+expect(Settings.get("combat_log"), "New Ability!", "normal output uses struct name for unmapped ability")
+Settings.update("pvme_syntax", true)
+ability(999998)
+expect(Settings.get("combat_log"), "New Ability! -> newability", "unmapped PvME ability gets compact struct name")
+ability(19255)
+expect(Recorder.GetLastAction(), "balancedstrike", "existing PvME translation takes priority over struct name")
+Settings.update("pvme_syntax", false)
+local nameTestLog = Settings.get("combat_log")
+ability(999997)
+ability(999996)
+expect(Settings.get("combat_log"), nameTestLog, "blank and failed names are skipped")
+Recorder.ClearLog()
 ability(19255)
 expect(Settings.get("combat_log"), "balanced strike", "first ability has no separator")
 expect(Recorder.GetLastAction(), "balanced strike", "record before panes open")
