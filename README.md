@@ -22,11 +22,17 @@ Abilities are joined with ` -> `; equipment changes and ammunition switches use 
 
 - Abilities with a nonempty `COMBATV2_ABILITY_NAME` in their API struct. Normal output preserves the game's name and capitalization.
 - Equipment changes, including equipping and unequipping items. The gear already worn when recording starts establishes a baseline and is not added to the log.
-- Supported active-ammunition changes from Pernix and Tirannwn quivers.
+- Active-ammunition changes from Pernix and Tirannwn quivers for explicitly mapped T80+ arrows and bolts.
 - Weapon special attacks annotated with the main-hand weapon equipped when used.
 - Essence of Finality special attacks annotated using your configured stored-weapon mapping.
 
-Ability names come from `config.Struct.FromID(abilityID):GetParamValue(config.Param.COMBATV2_ABILITY_NAME)`. Missing, empty, or unreadable names are skipped. PvME output keeps the bundled ID-based translations (including special attacks) and falls back to a lowercase name with spaces and punctuation removed. These generated ability tokens and unmapped equipment tokens may not have corresponding PvME icons. Ammunition coverage depends on the bundled maps.
+Ability names come from `config.Struct.FromID(abilityID):GetParamValue(config.Param.COMBATV2_ABILITY_NAME)`. Missing, empty, or unreadable names are skipped. PvME output keeps the bundled ID-based translations (including special attacks) and falls back to a lowercase name with spaces and punctuation removed. These generated ability tokens and unmapped equipment tokens may not have corresponding PvME icons.
+
+Ammo uses explicit `id.Obj` entries in `ammomap.lua` and `ammomap_pvme.lua`, with no runtime lookup or generated tokens. Coverage includes standard completed T80+ quiver arrows and bolts: bane and tuned bane, stalker/wild/araxyte, elder rune/primal, black stone, dinarrows and their god variants, deathspore/splintering, royal/wyvern/Ascension/Ascendri/blight, onyx bolts (e), and plain, gem-tipped and enchanted bakriminel bolts. Below-T80 ammo, Daemonheim-only ammo, old poisoned variants, stack-display configs, and unfinished components are outside this map. Unknown ammo is skipped.
+
+The PvME ammo map contains only canonical `id` values for matching `preset_slot: 9` entries in [PVME's emoji definitions](https://github.com/pvme/pvme-settings/blob/master/emojis/emojis_v2.json). Stack artwork, quivers, pouches and other non-ammo entries are excluded. Ammo without a matching PvME entry retains its normal name, including spaces, in quiver-switch logs. Equipment-change logs use a compact token when no explicit PvME alias exists.
+
+Tier coverage reference: [arrows](https://runescape.wiki/w/Arrows), [bolts](https://runescape.wiki/w/Bolts), and [bane ammunition](https://runescape.wiki/w/Bane_ammunition).
 
 ## Essence of Finality configuration
 

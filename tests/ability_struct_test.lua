@@ -1,3 +1,6 @@
+id = id or {}
+dofile("../runescape-api-stubs/consts/Obj.lua")
+dofile("../runescape-api-stubs/consts/Struct.lua")
 -- Run from combat-recorder: lua tests/ability_struct_test.lua
 local AbilityStruct = require("ability_struct")
 local nameParam = {}

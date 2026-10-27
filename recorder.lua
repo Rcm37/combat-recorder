@@ -89,16 +89,16 @@ local function onVarTransmit(event)
             if pvme and name then name = name:lower():gsub("[%s%p]", "") end
         end
     else
-        local map = pvme and action.pvmeMap or action.map
-        name = map[event.newValue]
+        name = pvme and action.pvmeMap[event.newValue] or nil
+        if name == nil then name = action.map[event.newValue] end
     end
     if name == nil then return end
 
     if event.var.configName == "COMBATV2_JUST_USED_ABILITY" then
-        if event.newValue == 28430 then
+        if event.newValue == id.Struct.COMBATV2_ABILITY_CONSTITUTION_SPECIAL_ATTACK then
             local weapon = Equipment.GetEquipped(Equipment.MAIN_HAND)
             name = weapon and ItemNames.Special(name, weapon.name, pvme) or (name .. " (unknown weapon)")
-        elseif event.newValue == 11748 then
+        elseif event.newValue == id.Struct.COMBATV2_ABILITY_CONSTITUTION_ALCHEMICAL_HYDRIX_AMULET then
             local amulet = Equipment.GetEquipped(Equipment.NECK)
             local variant = amulet and EOF.GetVariant(amulet.id)
             local storedWeapon = variant and EOF.GetWeapon(variant)

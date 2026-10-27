@@ -1,3 +1,6 @@
+id = id or {}
+dofile("../runescape-api-stubs/consts/Obj.lua")
+dofile("../runescape-api-stubs/consts/Struct.lua")
 -- Run from combat-recorder: lua tests/recorder_test.lua
 local checks = 0
 local function expect(actual, expected, label)
@@ -482,6 +485,20 @@ SettingsPane.Start()
 expect(Recorder.GetLastAction(), nil, "restart clears session last action")
 ability(14682)
 expect(Settings.get("combat_log"), previousLog .. " -> backhand", "restart retains saved log")
+config.Obj = {FromID=function() error("Ammo recording must use explicit maps") end}
+Settings.update("pvme_syntax", false)
+Recorder.ClearLog()
+ammo(id.Obj.DINARROW_JAS_DEMONBANE, id.Obj.SNIPER_BOLTS_RU_E)
+expect(Settings.get("combat_log"), "jas demonbane arrows", "T95 ammo records its explicit name")
+Settings.update("pvme_syntax", true)
+Recorder.ClearLog()
+ammo(id.Obj.DINARROW_JAS_DEMONBANE, id.Obj.SNIPER_BOLTS_RU_E)
+expect(Settings.get("combat_log"), "jasdemonbanearrow", "T95 ammo records its explicit PvME token")
+Recorder.ClearLog()
+ammo(id.Obj.QBD2_BOLTS, id.Obj.DINARROW_JAS_DEMONBANE)
+expect(Settings.get("combat_log"), "royal bolts", "PvME ammo without an icon keeps its normal name")
+ammo(id.Obj.SNIPER_BOLTS_DI_E, id.Obj.QBD2_BOLTS)
+expect(Settings.get("combat_log"), "royal bolts + diamond", "PvME ammo uses the canonical preset-slot-9 ID")
 PluginShutdown() -- Safe without opening panes.
 for name, callbacks in pairs(subscriptions) do expect(next(callbacks), nil, name .. " cleaned up without panes") end
 print("Combat Recorder: " .. checks .. " checks passed")
