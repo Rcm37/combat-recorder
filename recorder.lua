@@ -2,6 +2,7 @@ local Settings = require("settings")
 local Equipment = require("equipment")
 local EOF = require("eof")
 local ItemNames = require("item_names")
+local AbilityStruct = require("ability_struct")
 local Recorder = {}
 local EVENT_ID = "combat-recorder-var-transmit"
 local lastAction
@@ -11,7 +12,7 @@ local listeners = {}
 -- Add new action types here; logging and UI notifications are shared below.
 local ActionTypes = {
     COMBATV2_JUST_USED_ABILITY = {
-        map = require("abilitymap"),
+        getName = AbilityStruct.GetName,
         pvmeMap = require("abilitymap_pvme"),
         separator = " -> ",
     },
@@ -80,15 +81,24 @@ local function onVarTransmit(event)
     if not action or (action.accepts and not action.accepts(event)) then return end
 
     local pvme = Settings.get("pvme_syntax")
-    local map = pvme and action.pvmeMap or action.map
-    local name = map[event.newValue]
+    local name
+    if action.getName then
+        if pvme then name = action.pvmeMap[event.newValue] end
+        if name == nil then
+            name = action.getName(event.newValue)
+            if pvme and name then name = name:lower():gsub("[%s%p]", "") end
+        end
+    else
+        name = pvme and action.pvmeMap[event.newValue] or nil
+        if name == nil then name = action.map[event.newValue] end
+    end
     if name == nil then return end
 
     if event.var.configName == "COMBATV2_JUST_USED_ABILITY" then
-        if event.newValue == 28430 then
+        if event.newValue == id.Struct.COMBATV2_ABILITY_CONSTITUTION_SPECIAL_ATTACK then
             local weapon = Equipment.GetEquipped(Equipment.MAIN_HAND)
             name = weapon and ItemNames.Special(name, weapon.name, pvme) or (name .. " (unknown weapon)")
-        elseif event.newValue == 11748 then
+        elseif event.newValue == id.Struct.COMBATV2_ABILITY_CONSTITUTION_ALCHEMICAL_HYDRIX_AMULET then
             local amulet = Equipment.GetEquipped(Equipment.NECK)
             local variant = amulet and EOF.GetVariant(amulet.id)
             local storedWeapon = variant and EOF.GetWeapon(variant)
