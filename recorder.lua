@@ -3,6 +3,7 @@ local Equipment = require("equipment")
 local EOF = require("eof")
 local ItemNames = require("item_names")
 local AbilityStruct = require("ability_struct")
+local PvME = require("pvme")
 local Recorder = {}
 local EVENT_ID = "combat-recorder-var-transmit"
 local lastAction
@@ -43,15 +44,14 @@ local function onEquipmentChanged(changes)
     local pvme = Settings.get("pvme_syntax")
     for _, change in ipairs(changes) do
         if pvme then
-            local item = change.item or change.previous
-            actions[#actions + 1] = (change.item and "" or "unequip ") .. ItemNames.Equipment(item)
+            if change.item then actions[#actions + 1] = ItemNames.Equipment(change.item) end
         elseif change.item then
             actions[#actions + 1] = "equip " .. change.item.name .. " [" .. change.slotName .. "]"
         else
             actions[#actions + 1] = "unequip " .. change.previous.name .. " [" .. change.slotName .. "]"
         end
     end
-    appendAction(table.concat(actions, " + "), " + ")
+    if #actions > 0 then appendAction(table.concat(actions, " + "), " + ") end
 end
 
 function Recorder.Subscribe(key, callback)
@@ -86,18 +86,22 @@ local function onVarTransmit(event)
         if pvme then name = action.pvmeMap[event.newValue] end
         if name == nil then
             name = action.getName(event.newValue)
-            if pvme and name then name = name:lower():gsub("[%s%p]", "") end
+            if pvme and name then name = PvME.Literal(name) end
         end
     else
         name = pvme and action.pvmeMap[event.newValue] or nil
-        if name == nil then name = action.map[event.newValue] end
+        if name == nil then
+            name = action.map[event.newValue]
+            if pvme and name then name = PvME.Literal(name) end
+        end
     end
     if name == nil then return end
 
     if event.var.configName == "COMBATV2_JUST_USED_ABILITY" then
         if event.newValue == id.Struct.COMBATV2_ABILITY_CONSTITUTION_SPECIAL_ATTACK then
             local weapon = Equipment.GetEquipped(Equipment.MAIN_HAND)
-            name = weapon and ItemNames.Special(name, weapon.name, pvme) or (name .. " (unknown weapon)")
+            name = weapon and ItemNames.Special(name, weapon.name, pvme)
+                or (name .. (pvme and " [unknown weapon]" or " (unknown weapon)"))
         elseif event.newValue == id.Struct.COMBATV2_ABILITY_CONSTITUTION_ALCHEMICAL_HYDRIX_AMULET then
             local amulet = Equipment.GetEquipped(Equipment.NECK)
             local variant = amulet and EOF.GetVariant(amulet.id)
@@ -105,7 +109,8 @@ local function onVarTransmit(event)
             if storedWeapon and storedWeapon ~= "" then
                 name = ItemNames.Special(name, storedWeapon, pvme)
             else
-                name = name .. " (" .. EOF.Describe(amulet and amulet.id) .. ")"
+                local description = EOF.Describe(amulet and amulet.id)
+                name = name .. " " .. (pvme and PvME.Literal(description) or ("(" .. description .. ")"))
             end
         end
     end

@@ -22,6 +22,9 @@ local function onLayerReady(event)
     view = prettyui.SimpleView.new(parent, {
         width = parent.width,
         height = parent.height,
+        -- Let the EOF fields scroll above an open dropdown without enlarging
+        -- the viewport beyond the space Plugin Hub actually displays.
+        layout = { paddingBottom = 210 },
     })
     combatLogField = view:AddTextField({
         maxLength = 9999,

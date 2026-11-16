@@ -10,6 +10,15 @@ end
 local subscriptions = {}
 local views = {}
 ui = { Hook = { ONINVTRANSMIT = "ONINVTRANSMIT" } }
+id.Component = { TOPLEVEL_V2__GAME_AREA = {} }
+local gameArea = { interfaceID = 1, width = 1920, height = 1080 }
+ui.Interfaces = {
+    GetComponent = function(_, componentID)
+        assert(componentID == id.Component.TOPLEVEL_V2__GAME_AREA)
+        return gameArea
+    end,
+    GetInterface = function(_, interfaceID) return interfaceID == 1 and {} or nil end,
+}
 local subscribeCalls = {}
 local function event(name)
     subscriptions[name] = {}
@@ -23,7 +32,7 @@ local function event(name)
 end
 Event = { VarTransmit = event("VarTransmit"), ContentLayerReady = event("ContentLayerReady"),
     SettingsLayerReady = event("SettingsLayerReady"), InventoryAdded = event("InventoryAdded"),
-    InventoryUpdated = event("InventoryUpdated"), InventoryRemoved = event("InventoryRemoved") }
+    InventoryUpdated = event("InventoryUpdated"), InventoryRemoved = event("InventoryRemoved"), Logic = event("Logic") }
 local function emit(name, payload)
     for _, callback in pairs(subscriptions[name]) do callback(payload) end
     if name == "InventoryUpdated" or name == "InventoryAdded" or name == "InventoryRemoved" then
@@ -59,8 +68,8 @@ Inventory = { Find = function(id)
     assert(id == 94, "must look up worn inventory")
     return wornAvailable and worn or nil
 end }
-prettyui = { SimpleView = { new = function()
-    local view = { text = {}, fields = {}, buttons = {}, toggles = {}, combos = {} }
+prettyui = { SimpleView = { new = function(_, options)
+    local view = { text = {}, fields = {}, buttons = {}, toggles = {}, combos = {}, options = options }
     view.root = { hooks = {} }
     function view.root:Subscribe(hook, callback) self.hooks[hook] = callback end
     function view:AddTitle() end
@@ -112,6 +121,20 @@ prettyui = { SimpleView = { new = function()
     views[#views + 1] = view
     return view
 end } }
+local floatingWindows = {}
+prettyui.Window = { new = function(parent, options)
+    local window = prettyui.SimpleView.new()
+    table.remove(views)
+    window.parent, window.interfaceID, window.options = parent, parent.interfaceID, options
+    window.root.x, window.root.y = options.x or 80, options.y or 80
+    function window:Show() self.root.hidden = false end
+    function window:Close()
+        if self.options.onClose then self.options.onClose(self) end
+        self.root.hidden = true
+    end
+    floatingWindows[#floatingWindows + 1] = window
+    return window
+end }
 
 local Settings = require("settings")
 local Recorder = require("recorder")
@@ -162,9 +185,9 @@ local function ability(id) transmit("COMBATV2_JUST_USED_ABILITY", id) end
 local function ammo(id, old) transmit("QUIVER_ACTIVE_AMMO", id, old) end
 local abilityNameParam = {}
 local abilityNames = {
-    [19255] = "balanced strike", [14682] = "backhand",
+    [19255] = "balanced<nbsp>strike", [14682] = "backhand",
     [28430] = "weapon special attack", [11748] = "essence of finality",
-    [999998] = "New Ability!", [999997] = "   ",
+    [999998] = "New<nbsp>Ability!", [999997] = "   ",
 }
 config = { Param = { COMBATV2_ABILITY_NAME = abilityNameParam }, Struct = {} }
 config.Struct.FromID = function(id)
@@ -179,7 +202,7 @@ ability(999998)
 expect(Settings.get("combat_log"), "New Ability!", "normal output uses struct name for unmapped ability")
 Settings.update("pvme_syntax", true)
 ability(999998)
-expect(Settings.get("combat_log"), "New Ability! -> newability", "unmapped PvME ability gets compact struct name")
+expect(Settings.get("combat_log"), "New Ability! -> [New Ability!]", "unmapped PvME ability is literal text")
 ability(19255)
 expect(Recorder.GetLastAction(), "balancedstrike", "existing PvME translation takes priority over struct name")
 Settings.update("pvme_syntax", false)
@@ -197,12 +220,24 @@ local content = views[#views]
 expect(content.text[2].content, "balanced strike", "pane shows last action recorded before opening")
 emit("SettingsLayerReady", parent)
 local settingsPane = views[#views]
+expect(parent.component.height, 600, "settings does not enlarge Plugin Hub's host")
+expect(settingsPane.options.height, 600, "settings viewport uses the visible host height")
 expect(settingsPane.fields[1].text, "balanced strike", "pane shows saved log")
 expect(settingsPane.combos[1].selected, 1, "no equipped EOF uses default variant")
+content.buttons["Open Combat Log"]()
+local floatingLog = floatingWindows[#floatingWindows]
+expect(floatingLog.parent, gameArea, "floating log belongs to game area instead of ribbon pane")
+expect(floatingLog.fields[1].text, "balanced strike", "floating log opens with saved recording")
+content.buttons["Open Combat Log"]()
+expect(#floatingWindows, 1, "repeated clicks reuse floating log window")
+floatingLog.root.x, floatingLog.root.y = 230, 160
+emit("Logic")
+expect(dofile("settings.lua").get("log_window_position"), "230,160", "dragged position persists across settings reload")
 ability(14682)
 expect(Settings.get("combat_log"), "balanced strike -> backhand", "ability separator")
 expect(content.text[2].content, "backhand", "last action refreshed")
 expect(settingsPane.fields[1].text, "balanced strike -> backhand", "log field refreshed")
+expect(floatingLog.fields[1].text, "balanced strike -> backhand", "floating log refreshes live")
 ammo(41629, 41627)
 expect(Settings.get("combat_log"), "balanced strike -> backhand + ruby bakriminel bolts (e)", "ammo separator and map")
 expect(content.text[2].content, "ruby bakriminel bolts (e)", "ammo last action")
@@ -246,9 +281,10 @@ expect(pcall(Settings.update, "recording_active", false), false, "failed toggle 
 expect(next(subscriptions.VarTransmit) ~= nil, true, "failed toggle retains recording subscription")
 failWrites = false
 content.toggles.pvme_syntax(nil, nil, "pvme_syntax", true)
-settingsPane.buttons["Clear Log"]()
+content.buttons["Clear Log"]()
 expect(Settings.get("combat_log"), "", "clear persists empty log")
 expect(settingsPane.fields[1].text, "", "clear refreshes field")
+expect(floatingLog.fields[1].text, "", "ribbon clear also refreshes floating log")
 expect(content.text[2].content, "ruby bakriminel bolts (e)", "clear preserves last action")
 ability(19255)
 ammo(41629, 41627)
@@ -273,6 +309,8 @@ failWrites = false
 emit("ContentLayerReady", parent)
 local reopenedContent = views[#views]
 expect(content.destroyed, true, "old content destroyed on reopen")
+expect(floatingLog.destroyed, nil, "ribbon reopening leaves independent floating log intact")
+floatingLog:Close()
 expect(reopenedContent.text[2].content, "backhand", "last action retained on reopen")
 wornSlots[3] = { obj = { id = 51065, name = "Ornamented red EOF" }, count = 1 }
 emit("SettingsLayerReady", parent)
@@ -282,6 +320,11 @@ wornSlots[3] = nil
 expect(settingsPane.destroyed, true, "old settings destroyed on reopen")
 ability(19255)
 expect(reopenedContent.text[2].content, "balancedstrike", "new content receives updates")
+expect(floatingLog.root.hidden, true, "recording does not reopen a closed floating window")
+reopenedContent.buttons["Open Combat Log"]()
+expect(#floatingWindows, 1, "closed floating log reopens without duplication")
+expect(floatingLog.root.hidden, false, "floating log is shown again")
+expect(floatingLog.fields[1].text, Settings.get("combat_log"), "reopened floating log shows current recording")
 expect(reopenedSettings.fields[1].text, Settings.get("combat_log"), "new settings receives updates")
 
 -- Configure regular and ornamented EOFs separately through the real pane callbacks.
@@ -297,6 +340,12 @@ local function chooseWeapon(name)
     error("missing weapon choice: " .. name)
 end
 variantCombo:Select(2, true) -- Regular red
+for _, choice in ipairs({ { "Annihilation", "annihilation eofspec" }, { "Zaros godsword", "zgs eofspec" } }) do
+    chooseWeapon(choice[1])
+    expect(Settings.get("eof_weapon_regular_red"), choice[1], "new EOF dropdown option saves weapon")
+    expect(require("item_names").Special("eofspec", EOF.GetWeapon(EOF.Variants[2]), true), choice[2],
+        "new EOF option uses explicit PvME mapping")
+end
 chooseWeapon("Dark bow")
 expect(Settings.get("eof_weapon_regular_red"), "Dark bow", "regular red selection saved")
 variantCombo:Select(10, true) -- Ornamented red
@@ -323,7 +372,7 @@ wornSlots[4] = item(1000, "Test sword")
 wornSlots[5] = item(2000, "Test armour")
 wornSlots[14] = item(41627, "Emerald bolts", 100)
 updateWorn()
-expect(Settings.get("combat_log"), "testsword + testarmour + emeraldbakri", "PvME swaps contain only shortnames in slot order")
+expect(Settings.get("combat_log"), "[Test sword] + [Test armour] + emeraldbakri", "PvME swaps bracket unmapped names in slot order")
 expect(reopenedSettings.fields[1].text, Settings.get("combat_log"), "equipment swaps refresh log pane")
 local unchangedLog = Settings.get("combat_log")
 wornSlots[14].count = 99
@@ -337,33 +386,52 @@ emit("InventoryUpdated", { inv = { id = 93 } })
 expect(Settings.get("combat_log"), unchangedLog, "ignore other inventories")
 Recorder.ClearLog()
 ability(28430)
-expect(Settings.get("combat_log"), "testaxe spec", "special reads current main hand before inventory update callback")
+expect(Settings.get("combat_log"), "[Test axe] spec", "special reads current main hand before inventory update callback")
 updateWorn()
-expect(Settings.get("combat_log"), "testaxe spec + testaxe", "special lookup does not consume swap detection")
+expect(Settings.get("combat_log"), "[Test axe] spec + [Test axe]", "special lookup does not consume swap detection")
 wornSlots[5] = nil
+local beforeUnequip = Settings.get("combat_log")
 updateWorn()
-expect(Recorder.GetLastAction(), "unequip testarmour", "PvME unequips retain removal marker without slot")
+expect(Settings.get("combat_log"), beforeUnequip, "PvME unequip adds no entry or separator")
+expect(Recorder.GetLastAction(), "[Test axe]", "PvME unequip preserves last recorded action")
 wornSlots[14] = item(41629, "Ruby bolts", 100)
 updateWorn()
 expect(Recorder.GetLastAction(), "rubybakri", "PvME ammo swaps use existing ammo aliases")
 wornSlots[5] = item(2001, "Augmented Tectonic robe top")
 updateWorn()
 expect(Recorder.GetLastAction(), "tectbody", "PvME armour alias strips augmentation")
+wornSlots[5] = item(id.Obj.NECRO_UNDERWORLD_BODY_T90_AUGMENTED, "Augmented Deathwarden robe top")
+updateWorn()
+expect(Recorder.GetLastAction(), "wardentop90", "PvME Deathwarden swaps resolve tier from item ID")
+wornSlots[5] = item(id.Obj.NECRO_UNDERWORLD_BODY_T80_AUGMENTED, "Augmented Deathwarden robe top")
+updateWorn()
+expect(Recorder.GetLastAction(), "wardentop80", "same display name resolves to different tier icon")
+wornSlots[5] = item(2003, "Elite tectonic mask")
+updateWorn()
+expect(Recorder.GetLastAction(), "elitetectmask", "new gear aliases reach the recording log")
+wornSlots[5] = nil
+wornSlots[14] = item(41627, "Emerald bolts", 100)
+beforeUnequip = Settings.get("combat_log")
+updateWorn()
+expect(Settings.get("combat_log"), beforeUnequip .. " + emeraldbakri", "mixed PvME changes record only the equipped item")
 Settings.update("pvme_syntax", false)
 wornSlots[5] = item(2002, "Test armour")
 updateWorn()
 expect(Recorder.GetLastAction(), "equip Test armour [Body]", "normal equipment syntax retains equip and slot")
+wornSlots[5] = nil
+updateWorn()
+expect(Recorder.GetLastAction(), "unequip Test armour [Body]", "normal mode still records unequips")
 Settings.update("pvme_syntax", true)
 
 wornSlots[3] = item(51051, "Red EOF")
 updateWorn()
-expect(Recorder.GetLastAction(), "eofredu", "regular red EOF swaps use colour-specific PvME token")
+expect(Recorder.GetLastAction(), "eofred", "regular red EOF swaps use canonical regular token")
 Recorder.ClearLog()
 ability(11748)
 expect(Settings.get("combat_log"), "dbow eofspec", "EOF uses stored weapon instead of main hand")
 wornSlots[3] = item(51065, "Ornamented red EOF")
 updateWorn()
-expect(Recorder.GetLastAction(), "eofred", "ornamented red EOF swaps use distinct PvME token")
+expect(Recorder.GetLastAction(), "eoforred", "ornamented red EOF swaps use distinct ornamented token")
 expect(reopenedSettings.combos[1].selected, 10, "open pane follows ornamented EOF swap")
 expect(reopenedSettings.combos[1].selectedLabel, "Ornamented - Red", "live swap refreshes visible EOF dropdown label")
 expect(reopenedSettings.combos[2].selectedLabel, "Guthix staff", "live swap refreshes visible weapon dropdown label")
@@ -374,15 +442,15 @@ expect(Settings.get("combat_log"), "gstaff eofspec", "ornamented EOF uses separa
 wornSlots[3] = item(51055, "Yellow EOF")
 Recorder.ClearLog()
 ability(11748)
-expect(Settings.get("combat_log"), "eofspec (not configured: Regular - Yellow)", "unconfigured EOF labeled honestly")
+expect(Settings.get("combat_log"), "eofspec [not configured: Regular - Yellow]", "unconfigured EOF description is literal text")
 wornSlots[3] = nil
 Recorder.ClearLog()
 ability(11748)
-expect(Settings.get("combat_log"), "eofspec (unknown EOF)", "missing EOF does not reuse stale weapon")
+expect(Settings.get("combat_log"), "eofspec [unknown EOF]", "missing EOF does not reuse stale weapon")
 wornSlots[4] = nil
 Recorder.ClearLog()
 ability(28430)
-expect(Settings.get("combat_log"), "spec (unknown weapon)", "missing main hand labeled honestly")
+expect(Settings.get("combat_log"), "spec [unknown weapon]", "missing main hand description is literal text")
 Settings.update("pvme_syntax", false)
 wornSlots[4] = item(1000, "Test sword")
 Recorder.ClearLog()
@@ -468,9 +536,12 @@ wornSlots[3] = item(51051, "Red EOF")
 updateWorn()
 Settings.update("recording_active", true)
 
+floatingLog.root.x, floatingLog.root.y = 310, 200
 PluginShutdown()
+expect(dofile("settings.lua").get("log_window_position"), "310,200", "shutdown saves final coordinates without a drag callback")
 expect(reopenedContent.destroyed, true, "content destroyed on shutdown")
 expect(reopenedSettings.destroyed, true, "settings destroyed on shutdown")
+expect(floatingLog.destroyed, true, "floating log destroyed on shutdown")
 expect(next(reopenedSettings.root.hooks), nil, "pane inventory hook removed with view")
 Settings.update("recording_active", false)
 Settings.update("recording_active", true)
@@ -482,6 +553,9 @@ PluginShutdown()
 Recorder.Start()
 ContentPane.Start()
 SettingsPane.Start()
+require("interface/log_window").Show()
+expect(floatingWindows[#floatingWindows].options.x, 310, "floating log restores saved horizontal position after restart")
+expect(floatingWindows[#floatingWindows].options.y, 200, "floating log restores saved vertical position after restart")
 expect(Recorder.GetLastAction(), nil, "restart clears session last action")
 ability(14682)
 expect(Settings.get("combat_log"), previousLog .. " -> backhand", "restart retains saved log")
@@ -496,9 +570,9 @@ ammo(id.Obj.DINARROW_JAS_DEMONBANE, id.Obj.SNIPER_BOLTS_RU_E)
 expect(Settings.get("combat_log"), "jasdemonbanearrow", "T95 ammo records its explicit PvME token")
 Recorder.ClearLog()
 ammo(id.Obj.QBD2_BOLTS, id.Obj.DINARROW_JAS_DEMONBANE)
-expect(Settings.get("combat_log"), "royal bolts", "PvME ammo without an icon keeps its normal name")
+expect(Settings.get("combat_log"), "[royal bolts]", "PvME ammo without an icon is literal text")
 ammo(id.Obj.SNIPER_BOLTS_DI_E, id.Obj.QBD2_BOLTS)
-expect(Settings.get("combat_log"), "royal bolts + diamond", "PvME ammo uses the canonical preset-slot-9 ID")
+expect(Settings.get("combat_log"), "[royal bolts] + diamond", "PvME ammo uses the canonical preset-slot-9 ID")
 PluginShutdown() -- Safe without opening panes.
 for name, callbacks in pairs(subscriptions) do expect(next(callbacks), nil, name .. " cleaned up without panes") end
 print("Combat Recorder: " .. checks .. " checks passed")

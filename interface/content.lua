@@ -1,5 +1,6 @@
 local Settings = require("settings")
 local Recorder = require("recorder")
+local LogWindow = require("interface/log_window")
 local ContentPane = {}
 local EVENT_ID = "combat-recorder-content-pane"
 local view, lastActionText
@@ -40,7 +41,9 @@ local function onLayerReady(event)
     view:AddText("Last action:")
     lastActionText = view:AddText(Recorder.GetLastAction() or "Waiting...")
     view:AddDivider()
-    view:AddText("Manage Combat Recorder settings via Plugin Hub to view full combat log!")
+    view:AddSimpleButton("Clear Log", function() Recorder.ClearLog() end)
+    view:AddSimpleButton("Open Combat Log", LogWindow.Show)
+    view:AddText("Open the combat log to view and copy your recording. Manage EOF weapons through Plugin Hub settings.")
     Recorder.Subscribe("content-pane", refreshLastAction)
 end
 
@@ -51,6 +54,7 @@ end
 function ContentPane.Shutdown()
     Event.ContentLayerReady.Unsubscribe(EVENT_ID)
     closeView()
+    LogWindow.Shutdown()
 end
 
 return ContentPane

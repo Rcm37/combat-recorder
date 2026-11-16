@@ -15,6 +15,10 @@ config.Struct.FromID = function(id)
     end }
 end
 assert(AbilityStruct.GetName(123) == "Soul Strike")
+nameValue = "Greater<nbsp>Concentrated<nbsp>Blast"
+assert(AbilityStruct.GetName(123) == "Greater Concentrated Blast")
+nameValue = "<nbsp><nbsp>"
+assert(AbilityStruct.GetName(123) == nil)
 nameValue = ""
 assert(AbilityStruct.GetName(123) == nil)
 nameValue = "   "

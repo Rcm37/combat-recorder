@@ -41,8 +41,8 @@ end
 assert(pvmeCount == 20, "Only the matching preset-slot-9 ammo types have tokens")
 assert(count == 56, "Expected 19 arrows and 37 bolts")
 local ItemNames = require("item_names")
-assert(ItemNames.Equipment({id=id.Obj.QBD2_BOLTS, name="Royal bolts"}) == "royalbolts",
-    "Equipment without a PvME ammo icon uses a compact token")
+assert(ItemNames.Equipment({id=id.Obj.QBD2_BOLTS, name="Royal bolts"}) == "[Royal bolts]",
+    "Equipment without a PvME ammo icon uses literal text")
 assert(ItemNames.Equipment({id=id.Obj.ASC_CRYSTAL_BOLT, name="Ascension bolts"}) == "ascbolts")
 assert(ItemNames.Equipment({id=id.Obj.ENCHANTED_ALCHEMICAL_HYDRIX_AMULET,
     name="Essence of finality amulet"}) == "eof", "EOF equipment aliases preserved")

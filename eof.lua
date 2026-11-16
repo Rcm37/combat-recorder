@@ -3,13 +3,13 @@ local EOF = { Variants = require("eof_variants") }
 
 -- Preset choices; other weapons can be entered by name.
 EOF.Weapons = {
-    "Armadyl battlestaff", "Armadyl godsword", "Bandos godsword", "Dark bow",
+    "Annihilation", "Armadyl battlestaff", "Armadyl godsword", "Bandos godsword", "Dark bow",
     "Death guard", "Decimation", "Dragon 2h sword", "Dragon battleaxe", "Dragon claws",
     "Dragon dagger", "Dragon halberd", "Dragon longsword", "Dragon mace",
     "Dragon scimitar", "Dragon spear", "Eldritch crossbow",
     "Gloomfire bow", "Granite maul", "Guthix staff", "Iban's staff", "Legatus's Emberstaff", "Saradomin godsword",
     "Seren godbow", "Staff of light", "Statius's warhammer", "Varanus's Mercy", "Vesta's longsword",
-    "Zamorak godsword", "Zamorak staff",
+    "Zamorak godsword", "Zamorak staff", "Zaros godsword",
 }
 
 local variantsByID = {}

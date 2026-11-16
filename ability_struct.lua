@@ -7,7 +7,10 @@ function AbilityStruct.GetName(abilityID)
         if not struct then return nil end
         return struct:GetParamValue(config.Param.COMBATV2_ABILITY_NAME)
     end)
-    if ok and type(name) == "string" and name:find("%S") then return name end
+    if ok and type(name) == "string" then
+        name = name:gsub("<nbsp>", " ")
+        if name:find("%S") then return name end
+    end
 end
 
 return AbilityStruct

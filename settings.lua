@@ -15,6 +15,7 @@ local CachedSettings = {}
 
 -- Settings and their default values/types
 local ValidSettings = {
+    log_window_position = { default = "", type = "string" },
     recording_active = {
         default = true,
         type = "boolean"
