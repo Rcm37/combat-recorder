@@ -29,6 +29,8 @@ Gear already worn when recording starts is not added to the log. Ammunition quan
 
 Abilities are separated by ` -> `. Equipment changes and ammunition switches use ` + `.
 
+PvME mode uses ` -> ` when an ability starts a new global cooldown and ` + ` when it does not.
+
 ## PvME output
 
 Supported abilities and gear use PvME emoji names. Items without a usable emoji appear in brackets, such as `[Am-zi]`.

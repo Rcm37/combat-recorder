@@ -573,6 +573,20 @@ ammo(id.Obj.QBD2_BOLTS, id.Obj.DINARROW_JAS_DEMONBANE)
 expect(Settings.get("combat_log"), "[royal bolts]", "PvME ammo without an icon is literal text")
 ammo(id.Obj.SNIPER_BOLTS_DI_E, id.Obj.QBD2_BOLTS)
 expect(Settings.get("combat_log"), "[royal bolts] + diamond", "PvME ammo uses the canonical preset-slot-9 ID")
+var = { VarClient = { COMBATV2_GLOBAL_COOLDOWN_START_CLIENT = { value = 100 } } }
+Recorder.ClearLog()
+var.VarClient.COMBATV2_GLOBAL_COOLDOWN_START_CLIENT.value = 200
+ability(19255)
+ability(14682)
+expect(Settings.get("combat_log"), "balancedstrike + backhand", "unchanged GCD marker joins next ability to current step")
+var.VarClient.COMBATV2_GLOBAL_COOLDOWN_START_CLIENT.value = 300
+ability(19255)
+expect(Settings.get("combat_log"), "balancedstrike + backhand -> balancedstrike", "new GCD marker begins a new ability step")
+Settings.update("pvme_syntax", false)
+ability(14682)
+expect(Recorder.GetLastAction(), "backhand", "normal recording keeps full ability names")
+expect(Settings.get("combat_log"), "balancedstrike + backhand -> balancedstrike -> backhand", "normal mode keeps its original separators")
+var = nil
 PluginShutdown() -- Safe without opening panes.
 for name, callbacks in pairs(subscriptions) do expect(next(callbacks), nil, name .. " cleaned up without panes") end
 print("Combat Recorder: " .. checks .. " checks passed")

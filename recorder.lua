@@ -4,6 +4,7 @@ local EOF = require("eof")
 local ItemNames = require("item_names")
 local AbilityStruct = require("ability_struct")
 local PvME = require("pvme")
+local GCD = require("gcd")
 local Recorder = {}
 local EVENT_ID = "combat-recorder-var-transmit"
 local lastAction
@@ -68,6 +69,7 @@ end
 
 function Recorder.ClearLog()
     Settings.update("combat_log", "")
+    GCD.Reset()
     notify()
 end
 
@@ -81,6 +83,12 @@ local function onVarTransmit(event)
     if not action or (action.accepts and not action.accepts(event)) then return end
 
     local pvme = Settings.get("pvme_syntax")
+    local separator = action.separator
+    if pvme and event.var.configName == "COMBATV2_JUST_USED_ABILITY" then
+        -- Sample on every ability notification, even when its name is missing,
+        -- so an ignored ability's GCD is not attributed to the next action.
+        separator = GCD.Separator()
+    end
     local name
     if action.getName then
         if pvme then name = action.pvmeMap[event.newValue] end
@@ -114,7 +122,7 @@ local function onVarTransmit(event)
             end
         end
     end
-    appendAction(name, action.separator)
+    appendAction(name, separator)
 end
 
 local active = false
@@ -123,6 +131,7 @@ local active = false
 local function setEnabled(enabled)
     if active == enabled then return end
     if enabled then
+        GCD.Reset()
         Equipment.Start(onEquipmentChanged)
         Event.VarTransmit.Subscribe(EVENT_ID, onVarTransmit)
     else
@@ -134,6 +143,7 @@ end
 
 local function onSettingChanged(name, value)
     if name == "recording_active" then setEnabled(value) end
+    if name == "pvme_syntax" then GCD.Reset() end
 end
 
 function Recorder.Start()
